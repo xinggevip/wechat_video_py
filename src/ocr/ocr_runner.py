@@ -221,3 +221,162 @@ class OCRRunner:
             cv2.imwrite(output_path, img)
 
         return hits
+
+
+def find_template(
+    screenshot: np.ndarray,
+    template: np.ndarray,
+    threshold: float = 0.8
+) -> Tuple[bool, Tuple[int, int, int, int], float]:
+    """
+    从全屏截图中找到模板图片的位置
+    
+    Args:
+        screenshot: 全屏截图（BGR格式的numpy数组）
+        template: 要查找的模板图片（屏幕中某一块的截图）
+        threshold: 匹配相似度阈值，范围0-1，默认0.8
+        
+    Returns:
+        Tuple[bool, Tuple[int, int, int, int], float]:
+            - found: 是否找到匹配
+            - box: 匹配区域的坐标 (x, y, width, height)，未找到时为 (0, 0, 0, 0)
+            - confidence: 匹配置信度
+            
+    Example:
+        >>> screenshot = cv2.imread('fullscreen.png')
+        >>> template = cv2.imread('button.png')
+        >>> found, (x, y, w, h), confidence = find_template(screenshot, template, 0.9)
+        >>> if found:
+        ...     print(f'找到目标，位置: ({x}, {y})，大小: {w}x{h}，置信度: {confidence:.2f}')
+    """
+    if screenshot is None or template is None:
+        return False, (0, 0, 0, 0), 0.0
+    
+    # 获取模板尺寸
+    h, w = template.shape[:2]
+    
+    # 确保截图尺寸大于等于模板尺寸
+    if screenshot.shape[0] < h or screenshot.shape[1] < w:
+        return False, (0, 0, 0, 0), 0.0
+    
+    # 转换为灰度图进行匹配（提高速度和准确性）
+    if len(screenshot.shape) == 3:
+        screenshot_gray = cv2.cvtColor(screenshot, cv2.COLOR_BGR2GRAY)
+    else:
+        screenshot_gray = screenshot
+        
+    if len(template.shape) == 3:
+        template_gray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
+    else:
+        template_gray = template
+    
+    # 使用归一化相关系数匹配法
+    result = cv2.matchTemplate(screenshot_gray, template_gray, cv2.TM_CCOEFF_NORMED)
+    
+    # 获取最佳匹配位置和值
+    min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
+    
+    # 判断是否达到阈值
+    if max_val >= threshold:
+        x, y = max_loc
+        return True, (x, y, w, h), float(max_val)
+    
+    return False, (0, 0, 0, 0), float(max_val)
+
+
+def find_all_templates(
+    screenshot: np.ndarray,
+    template: np.ndarray,
+    threshold: float = 0.8
+) -> List[Tuple[Tuple[int, int, int, int], float]]:
+    """
+    从全屏截图中找到所有匹配模板图片的位置
+    
+    Args:
+        screenshot: 全屏截图（BGR格式的numpy数组）
+        template: 要查找的模板图片
+        threshold: 匹配相似度阈值，范围0-1，默认0.8
+        
+    Returns:
+        List[Tuple[Tuple[int, int, int, int], float]]:
+            匹配结果列表，每个元素为 ((x, y, width, height), confidence)
+            
+    Example:
+        >>> screenshot = cv2.imread('fullscreen.png')
+        >>> template = cv2.imread('icon.png')
+        >>> matches = find_all_templates(screenshot, template, 0.85)
+        >>> for (x, y, w, h), conf in matches:
+        ...     print(f'位置: ({x}, {y})，置信度: {conf:.2f}')
+    """
+    if screenshot is None or template is None:
+        return []
+    
+    h, w = template.shape[:2]
+    
+    if screenshot.shape[0] < h or screenshot.shape[1] < w:
+        return []
+    
+    # 转换为灰度图
+    if len(screenshot.shape) == 3:
+        screenshot_gray = cv2.cvtColor(screenshot, cv2.COLOR_BGR2GRAY)
+    else:
+        screenshot_gray = screenshot
+        
+    if len(template.shape) == 3:
+        template_gray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
+    else:
+        template_gray = template
+    
+    result = cv2.matchTemplate(screenshot_gray, template_gray, cv2.TM_CCOEFF_NORMED)
+    
+    # 找到所有超过阈值的位置
+    locations = np.where(result >= threshold)
+    
+    matches = []
+    for pt in zip(*locations[::-1]):  # 转换为 (x, y) 格式
+        x, y = pt
+        confidence = float(result[y, x])
+        matches.append(((x, y, w, h), confidence))
+    
+    # 使用非极大值抑制去除重叠的匹配
+    if matches:
+        matches = _non_max_suppression(matches, w, h)
+    
+    # 按置信度降序排序
+    matches.sort(key=lambda m: m[1], reverse=True)
+    
+    return matches
+
+
+def _non_max_suppression(
+    matches: List[Tuple[Tuple[int, int, int, int], float]],
+    w: int,
+    h: int,
+    overlap_thresh: float = 0.5
+) -> List[Tuple[Tuple[int, int, int, int], float]]:
+    """
+    非极大值抑制，去除重叠的匹配结果
+    """
+    if not matches:
+        return []
+    
+    # 按置信度排序
+    matches = sorted(matches, key=lambda m: m[1], reverse=True)
+    
+    keep = []
+    for match in matches:
+        (x, y, _, _), conf = match
+        
+        # 检查是否与已保留的匹配重叠
+        is_overlap = False
+        for kept_match in keep:
+            (kx, ky, _, _), _ = kept_match
+            # 如果中心点距离小于宽高的一半，认为重叠
+            if abs(x - kx) < w * overlap_thresh and abs(y - ky) < h * overlap_thresh:
+                is_overlap = True
+                break
+        
+        if not is_overlap:
+            keep.append(match)
+    
+    return keep

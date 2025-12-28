@@ -12,10 +12,14 @@ import tempfile
 from io import BytesIO
 from typing import Optional
 
+import cv2
+import numpy as np
+
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from fastapi.responses import StreamingResponse
 
 from src.ocr import OCRRunner
+from src.ocr.ocr_runner import find_template
 from src.extractor import CoverExtractorCV
 from src.config import get_settings
 
@@ -193,6 +197,74 @@ async def locate_keyword(
         # 清理临时目录
         if os.path.exists(temp_dir):
             shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+@router.post("/find-template", summary="模板匹配")
+async def find_template_api(
+    screenshot: UploadFile = File(..., description="全屏截图"),
+    template: UploadFile = File(..., description="要查找的模板图片"),
+    threshold: float = Form(default=0.8, description="匹配相似度阈值(0-1)"),
+):
+    """
+    从全屏截图中查找模板图片的位置
+    
+    - **screenshot**: 全屏截图
+    - **template**: 要查找的模板图片（屏幕中某一块的截图）
+    - **threshold**: 匹配相似度阈值，范围0-1，默认0.8
+    
+    返回匹配位置的坐标信息
+    """
+    try:
+        # 读取全屏截图
+        screenshot_content = await screenshot.read()
+        screenshot_arr = np.frombuffer(screenshot_content, dtype=np.uint8)
+        screenshot_img = cv2.imdecode(screenshot_arr, cv2.IMREAD_COLOR)
+        
+        if screenshot_img is None:
+            return {
+                "code": 500,
+                "data": None,
+                "msg": "无法解析全屏截图，请确保是有效的图片文件"
+            }
+        
+        # 读取模板图片
+        template_content = await template.read()
+        template_arr = np.frombuffer(template_content, dtype=np.uint8)
+        template_img = cv2.imdecode(template_arr, cv2.IMREAD_COLOR)
+        
+        if template_img is None:
+            return {
+                "code": 500,
+                "data": None,
+                "msg": "无法解析模板图片，请确保是有效的图片文件"
+            }
+        
+        # 执行模板匹配
+        found, (x, y, w, h), confidence = find_template(screenshot_img, template_img, threshold)
+        
+        if found:
+            return {
+                "code": 200,
+                "data": {
+                    "pos": {
+                        "x": x,
+                        "y": y
+                    },
+                    "confidence": round(confidence, 4)
+                }
+            }
+        else:
+            return {
+                "code": 200,
+                "data": None
+            }
+    
+    except Exception as e:
+        return {
+            "code": 500,
+            "data": None,
+            "msg": str(e)
+        }
 
 
 @router.get("/health", summary="健康检查")

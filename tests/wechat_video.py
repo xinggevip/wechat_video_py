@@ -71,8 +71,50 @@ def get_video_cover_images_by_api(long_screenshot_img_path, keyword):
             file_path = os.path.join(root, file)
             file_paths.append(file_path)
     
+    # 8. 按文件名数字排序（1.png, 2.png, 3.png...）
+    def extract_number(path):
+        """从文件名中提取数字用于排序"""
+        filename = os.path.basename(path)
+        name_without_ext = os.path.splitext(filename)[0]
+        try:
+            return int(name_without_ext)
+        except ValueError:
+            return float('inf')  # 非数字文件名排到最后
+    
+    file_paths.sort(key=extract_number)
+    
     return file_paths
 
+def find_template_by_api(screenshot_path, template_path, threshold):
+    """
+    调用API查找模板图片
+
+    Args:
+        screenshot_path: 截图图片路径
+        template_path: 模板图片路径
+        threshold: 匹配阈值
+
+    Returns:
+        dict: 匹配结果
+    """
+
+    url = "http://localhost:8000/api/v1/find-template"
+    screenshot_file_name = os.path.basename(screenshot_path)
+    template_file_name = os.path.basename(template_path)
+
+    payload = {'threshold': threshold}
+    files=[
+    ('screenshot',('全屏截图.png',open(screenshot_path,'rb'),'image/png')),
+    ('template',('2.png',open(template_path,'rb'),'image/png'))
+    ]
+    headers = {}
+
+    response = requests.request("POST", url, headers=headers, data=payload, files=files)
+
+    print(response.text)
+    return response.json()
+
+    pass
 
 if __name__ == "__main__":
     long_screenshot_img_path = r"C:\Users\Admin\Desktop\temp_screenshot_img.png"
