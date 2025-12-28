@@ -15,8 +15,8 @@ def main():
 
     # 2. 调用关键词定位
     results = ocr.locate_keyword(
-        image_path=r"C:\Users\Admin\Desktop\2025-12-27_095600.png",   # 长截图路径
-        keyword="品质",          # 要查找的关键词
+        image_path=r"src/input.png",   # 长截图路径
+        keyword="动态",          # 要查找的关键词
         draw=True,               # 是否画红框
         output_path="result.png" # 输出图片
     )
