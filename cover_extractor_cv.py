@@ -19,6 +19,7 @@ class CoverExtractorCV:
         color_tolerance: int = 15,             # 颜色容差
         min_cover_area: int = 10000,           # 最小封面面积（过滤噪点）
         aspect_ratio_range: Tuple[float, float] = (0.5, 2.0),  # 宽高比范围
+        edge_crop: int = 0,                    # 裁剪图片四周的像素
     ):
         """
         初始化封面提取器
@@ -28,11 +29,13 @@ class CoverExtractorCV:
             color_tolerance: 颜色容差，用于匹配背景色
             min_cover_area: 最小封面面积，过滤小区域
             aspect_ratio_range: 封面宽高比范围，过滤异常形状
+            edge_crop: 裁剪图片四周的像素，如传入10则上下左右各裁掉10px
         """
         self.bg_color_hex = bg_color_hex
         self.color_tolerance = color_tolerance
         self.min_cover_area = min_cover_area
         self.aspect_ratio_range = aspect_ratio_range
+        self.edge_crop = edge_crop
         
         # 解析背景色 HEX -> BGR
         self.bg_color_bgr = self._hex_to_bgr(bg_color_hex)
@@ -201,6 +204,14 @@ class CoverExtractorCV:
             # 从ROI中裁剪封面
             cover = roi[y:y+h, x:x+w]
             
+            # 裁剪四周边缘
+            if self.edge_crop > 0:
+                crop = self.edge_crop
+                cover_h, cover_w = cover.shape[:2]
+                # 确保裁剪后仍有有效区域
+                if cover_h > crop * 2 and cover_w > crop * 2:
+                    cover = cover[crop:cover_h-crop, crop:cover_w-crop]
+            
             # 保存
             output_path = os.path.join(output_dir, f"{i}.png")
             cv2.imwrite(output_path, cover)
@@ -252,9 +263,10 @@ def main():
     # 3. 初始化视觉封面提取器
     extractor = CoverExtractorCV(
         bg_color_hex="343434",       # 背景色
-        color_tolerance=15,           # 颜色容差
+        color_tolerance=10,           # 颜色容差
         min_cover_area=10000,         # 最小封面面积
         aspect_ratio_range=(0.5, 2.0),  # 宽高比范围
+        edge_crop=10,                 # 裁剪四周10px
     )
     
     # 4. 提取封面
