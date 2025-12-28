@@ -1,0 +1,5 @@
+# 忽略以下目录
+src/
+output/
+log/
+__pycache__/

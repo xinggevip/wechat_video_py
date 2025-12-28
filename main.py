@@ -6,7 +6,7 @@
 from ocr_runner import ocr_long_image
 
 if __name__ == "__main__":
-    image_path = "input.png"
+    image_path = "src/input.png"
     image_path = r'C:\Users\Admin\Desktop\2025-12-27_095600.png'
     target_text = "动态"   # 可为 None，表示全部返回
     target_text = "品质"
