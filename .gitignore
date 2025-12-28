@@ -1,6 +1,92 @@
-# 忽略以下目录
-src/
-output/
-log/
+# Byte-compiled / optimized / DLL files
 __pycache__/
-covers/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Translations
+*.mo
+*.pot
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Project specific
+data/output/
+data/input/*.png
+data/input/*.jpg
+data/input/*.jpeg
+!data/input/.gitkeep
+
+# PaddleOCR models cache
+~/.paddleocr/
+
+# Debug outputs
+*_debug_*.png
+result.png
+
+# Old files in root (已移动到src目录)
+cover_extractor.py
+cover_extractor_cv.py
+/main.py
+/ocr/
+/covers/
