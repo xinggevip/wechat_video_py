@@ -5,3 +5,14 @@
 # description: 微信视频号封面提取工具包
 
 __version__ = "1.0.0"
+
+from .ocr import OCRRunner
+from .extractor import CoverExtractorCV
+from .config import Settings, get_settings
+
+__all__ = [
+    "OCRRunner",
+    "CoverExtractorCV",
+    "Settings",
+    "get_settings",
+]
