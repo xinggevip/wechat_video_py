@@ -3,6 +3,7 @@
 # file: wechat_video.py
 # author: RPA高老师
 
+import keyword
 import os
 import shutil
 import zipfile
@@ -14,7 +15,7 @@ def get_desktop_path():
     return os.path.join(os.path.expanduser("~"), "Desktop")
 
 
-def get_video_cover_images_by_api(long_screenshot_img_path):
+def get_video_cover_images_by_api(long_screenshot_img_path, keyword):
     """
     调用API获取视频封面图片
     
@@ -26,7 +27,7 @@ def get_video_cover_images_by_api(long_screenshot_img_path):
     """
     # 1. 获取桌面路径下的"微信小视频"文件夹
     desktop_path = get_desktop_path()
-    target_folder = os.path.join(desktop_path, "微信小视频")
+    target_folder = os.path.join(desktop_path, "微信小视频", keyword, "视频封面")
     
     # 2. 若没有该文件夹则创建，若有则清空
     if os.path.exists(target_folder):
@@ -55,17 +56,17 @@ def get_video_cover_images_by_api(long_screenshot_img_path):
     with open(zip_file_path, 'wb') as f:
         f.write(response.content)
     
-    # 5. 创建临时文件夹temp_video_cover_images
-    temp_folder = os.path.join(target_folder, "temp_video_cover_images")
-    os.makedirs(temp_folder, exist_ok=True)
     
     # 6. 解压zip文件到临时文件夹
     with zipfile.ZipFile(zip_file_path, 'r') as zip_ref:
-        zip_ref.extractall(temp_folder)
+        zip_ref.extractall(target_folder)
+    
+    # 删除zip_file_path
+    os.remove(zip_file_path)
     
     # 7. 获取临时文件夹里所有文件的绝对路径
     file_paths = []
-    for root, dirs, files in os.walk(temp_folder):
+    for root, dirs, files in os.walk(target_folder):
         for file in files:
             file_path = os.path.join(root, file)
             file_paths.append(file_path)
@@ -74,6 +75,8 @@ def get_video_cover_images_by_api(long_screenshot_img_path):
 
 
 if __name__ == "__main__":
-    long_screenshot_img_path = r"C:\Users\Admin\Desktop\2025-12-27_122321.png"
-    cover_images = get_video_cover_images_by_api(long_screenshot_img_path)
+    long_screenshot_img_path = r"C:\Users\Admin\Desktop\temp_screenshot_img.png"
+    keyword = '途虎养车'
+    cover_images = get_video_cover_images_by_api(long_screenshot_img_path, keyword)
+    
     print(cover_images)
